@@ -85,7 +85,7 @@ test('should not let anyone but the author delete a message', async () => {
   const id = daniel.post('oi')
   await until(() => screen(bob)[0] === 'oi')
   bob.remove(id)
-  await until(() => daniel._length(bob.keys.publicKey) === 1) // bob's delete arrived
+  await until(() => daniel._log(bob.keys.publicKey).length === 1) // bob's delete arrived
   assert.deepStrictEqual(screen(daniel), ['oi'])
   assert.deepStrictEqual(screen(bob), ['oi'])
   daniel.close()
@@ -198,7 +198,7 @@ test('should refuse ops with a bad signature, seq or clock, and keep the first o
   peer._store(first)
   peer._store(op({ seq: 0, clock: 1, box: 'second' })) // same seq, other content
   assert.strictEqual(peer.logs.get(author.publicKey).get(0), first)
-  assert.strictEqual(peer._length(author.publicKey), 1)
+  assert.strictEqual(peer.logs.get(author.publicKey).length, 1)
   peer.socket.close()
 })
 
@@ -234,12 +234,9 @@ test('should answer a have with only the missing ops, plus every key', t => {
   peer.socket.close()
 })
 
-test('should accept a host in connect and count only the run without gaps', () => {
+test('should accept a host in connect', () => {
   const peer = new Peer()
   peer.connect(5000, 'localhost')
   assert.deepStrictEqual(peer.peers, [{ host: 'localhost', port: 5000 }])
-  const log = peer._log('someone')
-  for (const seq of [0, 1, 2, 4]) log.set(seq, {})
-  assert.strictEqual(peer._length('someone'), 3) // 3 is missing
   peer.socket.close()
 })

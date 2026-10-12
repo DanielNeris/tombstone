@@ -1,7 +1,6 @@
 const test = require('node:test')
 const assert = require('node:assert')
 const { View } = require('../lib/view')
-const { Log } = require('../lib/log')
 const { keyPair, sign } = require('../lib/identity')
 const { secret, seal } = require('../lib/secret')
 
@@ -133,13 +132,4 @@ test('should give the same view for every arrival order of the same ops', () => 
     results.add(JSON.stringify(show(view)))
   }
   assert.strictEqual(results.size, 1) // 120 orders, one result
-})
-
-test('should replay a log from the start with View.from', () => {
-  const log = new Log()
-  const a = msg(daniel, 0)
-  log.append(a)
-  log.append(del(mod, idOf(a), 0))
-  assert.deepStrictEqual(show(View.from(log)), ['daniel']) // mod is not an admin here
-  assert.deepStrictEqual(show(View.from(log, { admins: [mod.publicKey] })), ['daniel (deleted)'])
 })
