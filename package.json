@@ -1,15 +1,17 @@
 {
   "name": "tombstone",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Deleting messages in a P2P chat: tombstones, signatures, sync and crypto-shredding over UDP, zero dependencies",
+  "main": "lib/peer.js",
   "scripts": {
     "test": "node --test",
+    "coverage": "node --test --experimental-test-coverage --test-coverage-include='lib/**' --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100",
+    "demo": "node example/chat.js",
+    "sim": "node sim/loss.js",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
-  "keywords": [],
-  "author": "",
+  "author": "Daniel Neris",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
@@ -18,5 +20,8 @@
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.13.0",
     "prettier": "^3.9.10"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
