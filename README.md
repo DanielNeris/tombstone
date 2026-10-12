@@ -166,6 +166,15 @@ which differ from peer to peer.
 messages and 2 deletes sent at once, then a sync every 250 ms until both screens match
 and both deleted keys are gone:
 
+```mermaid
+xychart-beta
+    title "Sync rounds to converge: bars average, line worst case"
+    x-axis "packets lost" ["0%", "10%", "30%", "50%", "70%"]
+    y-axis "sync rounds" 0 --> 40
+    bar [0, 1.4, 3, 10, 23.5]
+    line [0, 4, 7, 20, 35]
+```
+
 | Packets lost | Converged with no sync | Sync rounds, average | Sync rounds, worst |
 | ------------ | ---------------------- | -------------------- | ------------------ |
 | 0%           | 20 / 20                | 0                    | 0                  |
