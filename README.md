@@ -37,7 +37,7 @@ the text needs a key that lives outside it:
 ```mermaid
 flowchart LR
     NET(("UDP")) -->|op| S["_store<br/>verify, seq, clock"]
-    S --> L["logs<br/>author → seq → op"]
+    S --> L["logs<br/>one Log per author"]
     S --> V["view<br/>messages and tombstones"]
     NET -->|key| K["secrets<br/>id → key"]
     V -->|deleted| X["_shred"]
@@ -100,8 +100,8 @@ flowchart TB
     PEER["lib/peer.js<br/>UDP, sync, keys"] --> VIEW["lib/view.js<br/>messages, tombstones, order"]
     PEER --> SECRET["lib/secret.js<br/>AES-256-GCM per message"]
     PEER --> ID["lib/identity.js<br/>Ed25519 sign, verify"]
+    PEER --> LOG["lib/log.js<br/>one author's append-only log"]
     VIEW --> ID
-    VIEW -.-> LOG["lib/log.js<br/>append-only log"]
 ```
 
 Read it bottom-up: `log.js`, `identity.js`, `secret.js`, `view.js`, then `peer.js`.
@@ -140,18 +140,18 @@ network is checked before use, and anything malformed is dropped.
 
 Each step was added because the previous one left a visible gap.
 
-| Step             | Added                                           | What broke, or what it showed                                                                                                            |
-| ---------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Append-only log  | frozen ops, `seq` from `push() - 1`             | nothing can be removed, so deleting has to be something you add                                                                          |
-| View + tombstone | a delete marks its target, the text is hidden   | the screen is right, but the original text is still in the log                                                                           |
-| Permission       | only the author or an admin                     | `author` was just a string: anyone could write `author: 'daniel'`                                                                        |
-| Signatures       | Ed25519, the author is the public key           | **bug:** every forged op verified. `crypto.verify` returns false on a bad signature, it doesn't throw, and the result was ignored        |
-| Convergence      | pending deletes, ignore duplicate messages      | 120 arrival orders of the same 5 ops gave 2 different chats: an early delete was dropped, and a late duplicate brought a message back    |
-| Two peers on UDP | chaos: packets delayed and duplicated           | **bug:** `_publish` applied ops to a `new View()` thrown away, so nobody saw their own messages. Content converged, display order didn't |
-| Sync             | per-author logs, signed `seq`, `have`           | without it, a lost tombstone kept the message alive on that peer forever                                                                 |
-| Lamport clock    | `clock = max(seen)`, order by `(clock, author)` | **bug:** `clock++` per op received instead of `max`. Fine with 2 peers; with 3, a reply can sort before its question                     |
-| Crypto-shredding | a key per message, sent outside the log         | **bug:** ids were picked by the author, so another peer could reuse one and take over a message. Ids became `author/seq`                 |
-| Shred on delete  | `_shred` drops the key of every deleted message | **bug:** `messages(m => ...)` passed a callback to a method that takes none. The screen said deleted while the key was still in memory   |
+| Step             | Added                                           | What broke, or what it showed                                                                                                                                                                               |
+| ---------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Append-only log  | frozen ops, `seq` from `push() - 1`             | nothing can be removed, so deleting has to be something you add                                                                                                                                             |
+| View + tombstone | a delete marks its target, the text is hidden   | the screen is right, but the original text is still in the log                                                                                                                                              |
+| Permission       | only the author or an admin                     | `author` was just a string: anyone could write `author: 'daniel'`                                                                                                                                           |
+| Signatures       | Ed25519, the author is the public key           | **bug:** every forged op verified. `crypto.verify` returns false on a bad signature, it doesn't throw, and the result was ignored                                                                           |
+| Convergence      | pending deletes, ignore duplicate messages      | 120 arrival orders of the same 5 ops gave 2 different chats: an early delete was dropped, and a late duplicate brought a message back                                                                       |
+| Two peers on UDP | chaos: packets delayed and duplicated           | **bug:** `_publish` applied ops to a `new View()` thrown away, so nobody saw their own messages. Content converged, display order didn't                                                                    |
+| Sync             | per-author logs, signed `seq`, `have`           | the array log couldn't take ops out of order (seq 4 before 3), so it became a Map by seq, with `length` = the run with no gap. Without `have`, a lost tombstone kept the message alive on that peer forever |
+| Lamport clock    | `clock = max(seen)`, order by `(clock, author)` | **bug:** `clock++` per op received instead of `max`. Fine with 2 peers; with 3, a reply can sort before its question                                                                                        |
+| Crypto-shredding | a key per message, sent outside the log         | **bug:** ids were picked by the author, so another peer could reuse one and take over a message. Ids became `author/seq`                                                                                    |
+| Shred on delete  | `_shred` drops the key of every deleted message | **bug:** `messages(m => ...)` passed a callback to a method that takes none. The screen said deleted while the key was still in memory                                                                      |
 
 Rules that came out of it: a delete is checked when it's applied, on every peer, since
 there's no server to refuse it; ops are accepted from anyone because they're signed,
